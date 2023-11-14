@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetris</title>
+  <style>
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(10, 30px);
+      grid-template-rows: repeat(20, 30px);
+      gap: 1px;
+      border: 1px solid #333;
+      position: relative;
+    }
+
+    .cell {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #ccc;
+      position: absolute;
+    }
+
+    .filled {
+      background-color: #333;
+    }
+
+    #score {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div>
+    <div id="game-board"></div>
+    <div id="score">Score: <span id="score-value">0</span></div>
+    <div>Controles: Flechas (↑, ↓, ←, →)</div>
+  </div>
+
+  <script>
+    const ROWS = 20;
+    const COLUMNS = 10;
+    const EMPTY_CELL = 0;
+    const FILLED_CELL = 1;
+
+    let board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(EMPTY_CELL));
+    let score = 0;
+
+    let currentPiece = {};
+
+    function drawBoard() {
+      const gameBoard = document.getElementById('game-board');
+      gameBoard.innerHTML = '';
+
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLUMNS; col++) {
+          const cell = document.createElement('div');
+          cell.className = `cell ${board[row][col] === FILLED_CELL ? 'filled' : ''}`;
+          cell.style.top = `${row * 31}px`; // Ajusta el tamaño de la celda y el espacio entre celdas
+          cell.style.left = `${col * 31}px`; // Ajusta el tamaño de la celda y el espacio entre celdas
+          gameBoard.appendChild(cell);
+        }
+      }
+
+      const { shape, row, col } = currentPiece;
+
+      for (let i = 0; i < shape.length; i++) {
+        for (let j = 0; j < shape[i].length; j++) {
+          if (shape[i][j] === FILLED_CELL) {
+            // Añade la clase 'filled' y ajusta la posición de la pieza en el tablero
+            const cell = document.createElement('div');
+            cell.className = 'cell filled';
+            cell.style.top = `${(row + i) * 31}px`; // Ajusta el tamaño de la celda y el espacio entre celdas
+            cell.style.left = `${(col + j) * 31}px`; // Ajusta el tamaño de la celda y el espacio entre celdas
+            gameBoard.appendChild(cell);
+          }
+        }
+      }
+
+      document.getElementById('score-value').textContent = score;
+    }
+
+    function mergePiece() {
+      const { shape, row, col } = currentPiece;
+
+      for (let i = 0; i < shape.length; i++) {
+        for (let j = 0; j < shape[i].length; j++) {
+          if (shape[i][j] === FILLED_CELL) {
+            board[row + i][col + j] = FILLED_CELL;
+          }
+        }
+      }
+    }
+
+    function moveDown() {
+      currentPiece.row++;
+
+      if (!isValidMove()) {
+        currentPiece.row--;
+        mergePiece();
+        clearLines();
+        spawnPiece();
+      }
+    }
+
+    function rotatePiece() {
+      const originalShape = currentPiece.shape;
+      const rotatedShape = [];
+
+      for (let i = 0; i < originalShape[0].length; i++) {
+        rotatedShape.push([]);
+        for (let j = originalShape.length - 1; j >= 0; j--) {
+          rotatedShape[i].push(originalShape[j][i]);
+        }
+      }
+
+      currentPiece.shape = rotatedShape;
+
+      if (!isValidMove()) {
+        currentPiece.shape = originalShape;
+      }
+    }
+
+    function moveLeft() {
+      currentPiece.col--;
+
+      if (!isValidMove()) {
+        currentPiece.col++;
+      }
+    }
+
+    function moveRight() {
+      currentPiece.col++;
+
+      if (!isValidMove()) {
+        currentPiece.col--;
+      }
+    }
+
+    function isValidMove() {
+      const { shape, row, col } = currentPiece;
+
+      for (let i = 0; i < shape.length; i++) {
+        for (let j = 0; j < shape[i].length; j++) {
+          if (
+            shape[i][j] === FILLED_CELL &&
+            (board[row + i] && board[row + i][col + j]) !== EMPTY_CELL
+          ) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    function spawnPiece() {
+      // Define diferentes formas de piezas aquí
+      const pieces = [
+        {
+          shape: [
+            [1, 1, 1, 1], // I piece
+          ],
+        },
+        {
+          shape: [
+            [1, 1],
+            [1, 1], // Cube
+          ],
+        },
+        {
+          shape: [
+            [1, 1, 1, 1], // Line
+          ],
+        },
+        {
+          shape: [
+            [1, 1],
+            [0, 1],
+            [0, 1], // L piece
+          ],
+        },
+        {
+          shape: [
+            [1, 1],
+            [1, 0],
+            [1, 0], // T piece
+          ],
+        },
+        {
+          shape: [
+            [1, 1, 0],
+            [0, 1, 1], // S piece
+          ],
+        },
+        {
+          shape: [
+            [0, 1, 1],
+            [1, 1, 0], // Z piece
+          ],
+        },
+        {
+          shape: [
+            [1, 1, 1],
+            [0, 0, 1], // J piece
+          ],
+        },
+        {
+          shape: [
+            [1, 1, 1],
+            [1, 0, 0], // L piece
+          ],
+        },
+        // Agrega más formas de piezas según sea necesario
+      ];
+
+      // Elige aleatoriamente una pieza
+      currentPiece = pieces[Math.floor(Math.random() * pieces.length)];
+
+      currentPiece.row = 0;
+      currentPiece.col = Math.floor(COLUMNS / 2) - Math.floor(currentPiece.shape[0].length / 2);
+
+      if (!isValidMove()) {
+        // Game over
+        alert('Game over! Score: ' + score);
+        startGame();
+      }
+    }
+
+    function clearLines() {
+      for (let row = ROWS - 1; row >= 0; row--) {
+        if (board[row].every(cell => cell === FILLED_CELL)) {
+          // Clear the line and move everything above it down
+          board.splice(row, 1);
+          board.unshift(Array(COLUMNS).fill(EMPTY_CELL));
+          score += 100; // Increase score for each cleared line
+        }
+      }
+    }
+
+    function clearBoard() {
+      board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(EMPTY_CELL));
+    }
+
+    function startGame() {
+      clearBoard();
+      score = 0;
+      spawnPiece();
+      drawBoard();
+
+      function gameLoop() {
+        moveDown();
+        drawBoard();
+        setTimeout(gameLoop, 500); // Ajusta la velocidad del juego aquí
+      }
+
+      // Capturar eventos de teclado
+      document.addEventListener('keydown', (event) => {
+        switch (event.key) {
+          case 'ArrowDown':
+            moveDown();
+            drawBoard();
+            break;
+          case 'ArrowUp':
+            rotatePiece();
+            drawBoard();
+            break;
+          case 'ArrowLeft':
+            moveLeft();
+            drawBoard();
+            break;
+          case 'ArrowRight':
+            moveRight();
+            drawBoard();
+            break;
+        }
+      });
+
+      gameLoop();
+    }
+
+    startGame();
+  </script>
+
+</body>
+
+</html>
